@@ -5,30 +5,34 @@ import numpy as np
 class NativeTensor:
     
     def __init__(self, values):
-        self.backing = values
+        self.values = values
         
     def from_values(values):
         return NativeTensor(values)
     
     @property
     def size(self):
-        return self.backing.size
+        return self.values.size
     
     @property
     def shape(self):
-        return self.backing.shape
+        return self.values.shape
     
     def __getitem__(self, index):
-        return NativeTensor(self.backing[index])
+        return NativeTensor(self.values[index])
+    
+    def concatenate(self, other):
+        assert isinstance(other, NativeTensor), type(other)
+        return NativeTensor.from_values(np.concatenate([self.values, other.values]))
 
     def reveal(self):
         return self
     
     def unwrap(self):
-        return self.backing
+        return self.values
     
     def __repr__(self):
-        return "NativeTensor(%s)" % self.backing
+        return "NativeTensor(%s)" % self.values
     
     def wrap_if_needed(y):
         if isinstance(y, int) or isinstance(y, float): return NativeTensor.from_values(np.array([y]))
@@ -37,9 +41,9 @@ class NativeTensor:
     
     def add(x, y):
         y = NativeTensor.wrap_if_needed(y)
-        if isinstance(y, NativeTensor): return NativeTensor(x.backing + y.backing)
-        if isinstance(y, PublicEncodedTensor): return PublicEncodedTensor.from_values(x.backing).add(y)
-        if isinstance(y, PrivateEncodedTensor): return PublicEncodedTensor.from_values(x.backing).add(y)
+        if isinstance(y, NativeTensor): return NativeTensor(x.values + y.values)
+        if isinstance(y, PublicEncodedTensor): return PublicEncodedTensor.from_values(x.values).add(y)
+        if isinstance(y, PrivateEncodedTensor): return PublicEncodedTensor.from_values(x.values).add(y)
         raise TypeError("%s does not support %s" % (type(x), type(y)))
         
     def __add__(x, y):
@@ -47,9 +51,9 @@ class NativeTensor:
     
     def sub(x, y):
         y = NativeTensor.wrap_if_needed(y)
-        if isinstance(y, NativeTensor): return NativeTensor(x.backing - y.backing)
-        if isinstance(y, PublicEncodedTensor): return PublicEncodedTensor.from_values(x.backing).sub(y)
-        if isinstance(y, PrivateEncodedTensor): return PublicEncodedTensor.from_values(x.backing).sub(y)
+        if isinstance(y, NativeTensor): return NativeTensor(x.values - y.values)
+        if isinstance(y, PublicEncodedTensor): return PublicEncodedTensor.from_values(x.values).sub(y)
+        if isinstance(y, PrivateEncodedTensor): return PublicEncodedTensor.from_values(x.values).sub(y)
         raise TypeError("%s does not support %s" % (type(x), type(y)))
         
     def __sub__(x, y):
@@ -57,9 +61,9 @@ class NativeTensor:
     
     def mul(x, y):
         y = NativeTensor.wrap_if_needed(y)
-        if isinstance(y, NativeTensor): return NativeTensor(x.backing * y.backing)
-        if isinstance(y, PublicEncodedTensor): return PublicEncodedTensor.from_values(x.backing).mul(y)
-        if isinstance(y, PrivateEncodedTensor): return PublicEncodedTensor.from_values(x.backing).mul(y)
+        if isinstance(y, NativeTensor): return NativeTensor(x.values * y.values)
+        if isinstance(y, PublicEncodedTensor): return PublicEncodedTensor.from_values(x.values).mul(y)
+        if isinstance(y, PrivateEncodedTensor): return PublicEncodedTensor.from_values(x.values).mul(y)
         raise TypeError("%s does not support %s" % (type(x), type(y)))
         
     def __mul__(x, y):
@@ -67,39 +71,39 @@ class NativeTensor:
         
     def dot(x, y):
         y = NativeTensor.wrap_if_needed(y)
-        if isinstance(y, NativeTensor): return NativeTensor(x.backing.dot(y.backing))
-        if isinstance(y, PublicEncodedTensor): return PublicEncodedTensor.from_values(x.backing).dot(y)
-        if isinstance(y, PrivateEncodedTensor): return PublicEncodedTensor.from_values(x.backing).dot(y)
+        if isinstance(y, NativeTensor): return NativeTensor(x.values.dot(y.values))
+        if isinstance(y, PublicEncodedTensor): return PublicEncodedTensor.from_values(x.values).dot(y)
+        if isinstance(y, PrivateEncodedTensor): return PublicEncodedTensor.from_values(x.values).dot(y)
         raise TypeError("%s does not support %s" % (type(x), type(y)))
         
     def div(x, y):
         y = NativeTensor.wrap_if_needed(y)
-        if isinstance(y, NativeTensor): return NativeTensor(x.backing / y.backing)
+        if isinstance(y, NativeTensor): return NativeTensor(x.values / y.values)
         raise TypeError("%s does not support %s" % (type(x), type(y)))
         
     def __div__(x, y):
         return x.div(y)
         
     def transpose(x):
-        return NativeTensor(x.backing.T)
+        return NativeTensor(x.values.T)
     
     def neg(x):
-        return NativeTensor(0 - x.backing)
+        return NativeTensor(0 - x.values)
 
     def sum(x, axis):
-        return NativeTensor(x.backing.sum(axis=axis, keepdims=True))
+        return NativeTensor(x.values.sum(axis=axis, keepdims=True))
     
     def argmax(x, axis):
-        return NativeTensor.from_values(x.backing.argmax(axis=axis))
+        return NativeTensor.from_values(x.values.argmax(axis=axis))
     
     def exp(x):
-        return NativeTensor(np.exp(x.backing))
+        return NativeTensor(np.exp(x.values))
     
     def log(x):
-        return NativeTensor(np.log(x.backing))
+        return NativeTensor(np.log(x.values))
     
     def inv(x):
-        return NativeTensor(1. / x.backing)
+        return NativeTensor(1. / x.values)
     
 
 DTYPE = 'object'
@@ -135,7 +139,7 @@ def decode(elements):
 def wrap_if_needed(y):
     if isinstance(y, int) or isinstance(y, float): return PublicEncodedTensor.from_values(np.array([y]))
     if isinstance(y, np.ndarray): return PublicEncodedTensor.from_values(y)
-    if isinstance(y, NativeTensor): return PublicEncodedTensor.from_values(y.backing)
+    if isinstance(y, NativeTensor): return PublicEncodedTensor.from_values(y.values)
     return y
 
 class PublicEncodedTensor:
@@ -159,6 +163,10 @@ class PublicEncodedTensor:
     
     def __getitem__(self, index):
         return PublicEncodedTensor.from_elements(self.elements[index])
+    
+    def concatenate(self, other):
+        assert isinstance(other, PublicEncodedTensor), type(other)
+        return PublicEncodedTensor.from_elements(np.concatenate([self.elements, other.elements]))
     
     @property
     def shape(self):
@@ -436,6 +444,12 @@ class PrivateEncodedTensor:
     
     def __getitem__(self, index):
         return PrivateEncodedTensor.from_shares(self.shares0[index], self.shares1[index])
+    
+    def concatenate(self, other):
+        assert isinstance(other, PrivateEncodedTensor), type(other)
+        shares0 = np.concatenate([self.shares0, other.shares0])
+        shares1 = np.concatenate([self.shares1, other.shares1])
+        return PrivateEncodedTensor.from_shares(shares0, shares1)
     
     @property
     def shape(self):

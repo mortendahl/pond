@@ -1,5 +1,6 @@
 import numpy as np
 from datetime import datetime
+from functools import reduce
 
 
 class Layer:
@@ -174,7 +175,8 @@ class DataLoader:
         self.data = data
         self.wrapper = wrapper
         
-    def new_generator(self, batch_size=32):
+    def batches(self, batch_size=None):
+        if batch_size is None: batch_size = data.shape[0]
         return ( 
             self.wrapper(self.data[i:i+batch_size]) 
             for i in range(0, self.data.shape[0], batch_size) 
@@ -208,14 +210,16 @@ class Sequential(Model):
         if not isinstance(y_train, DataLoader): y_train = DataLoader(y_train)
         for epoch in range(epochs):
             if verbose >= 1: print(datetime.now(), "Epoch %s" % epoch)
-            x_chunks = x_train.new_generator()
-            y_chunks = y_train.new_generator()
-            for batch_index, (x, y) in enumerate(zip(x_chunks, y_chunks)):
+            batches = zip(x_train.batches(batch_size), y_train.batches(batch_size))
+            for batch_index, (x, y) in enumerate(batches):
                 if verbose >= 2: print(datetime.now(), "Batch %s" % batch_index)
                 y_pred = self.forward(x)
                 d_y = loss.derive(y_pred, y)
                 self.backward(d_y, learning_rate)
             
-    def predict(self, x):
+    def predict(self, x, batch_size=32):
         if not isinstance(x, DataLoader): x = DataLoader(x)
-        return np.stack( self.forward(batch) for batch in x.new_generator() )
+        batches = ( self.forward(batch) for batch in x.batches(batch_size) )
+        combined = reduce(lambda x, y: x.concatenate(y), batches)
+        return combined
+        

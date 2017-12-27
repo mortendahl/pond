@@ -27,20 +27,20 @@ model = Sequential([
 ])
 
 
-x = DataLoader(x_train, NativeTensor)
-y = DataLoader(y_train, NativeTensor)
+x = DataLoader(x_train, wrapper=NativeTensor)
+y = DataLoader(y_train, wrapper=NativeTensor)
 model.initialize()
 model.fit(x, y, Diff(), epochs=2000, learning_rate=.1)
 print(model.predict(x))
 print("Native training done.")
 
 
-# x = DataLoader(x_train, PublicEncodedTensor)
-# y = DataLoader(y_train, PublicEncodedTensor)
-# model.initialize()
-# model.fit(x, y, Diff(), epochs=2000, learning_rate=.1)
-# print(model.predict(x))
-# print("Encoded training done.")
+x = DataLoader(x_train, PublicEncodedTensor)
+y = DataLoader(y_train, PublicEncodedTensor)
+model.initialize()
+model.fit(x, y, Diff(), epochs=2000, learning_rate=.1)
+print(model.predict(x))
+print("Encoded training done.")
 
 
 x = DataLoader(x_train, PrivateEncodedTensor)
