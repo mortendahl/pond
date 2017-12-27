@@ -211,15 +211,18 @@ class Sequential(Model):
         for epoch in range(epochs):
             if verbose >= 1: print(datetime.now(), "Epoch %s" % epoch)
             batches = zip(x_train.batches(batch_size), y_train.batches(batch_size))
-            for batch_index, (x, y) in enumerate(batches):
+            for batch_index, (x_batch, y_batch) in enumerate(batches):
                 if verbose >= 2: print(datetime.now(), "Batch %s" % batch_index)
-                y_pred = self.forward(x)
-                d_y = loss.derive(y_pred, y)
+                y_pred = self.forward(x_batch)
+                d_y = loss.derive(y_pred, y_batch)
                 self.backward(d_y, learning_rate)
             
-    def predict(self, x, batch_size=32):
+    def predict(self, x, batch_size=32, verbose=0):
         if not isinstance(x, DataLoader): x = DataLoader(x)
-        batches = ( self.forward(batch) for batch in x.batches(batch_size) )
-        combined = reduce(lambda x, y: x.concatenate(y), batches)
-        return combined
+        batches = []
+        for batch_index, x_batch in enumerate(x.batches(batch_size))
+            if verbose >= 2: print(datetime.now(), "Batch %s" % batch_index)
+            y_batch = self.forward(x_batch)
+            batches.append(y_batch)
+        return reduce(lambda x, y: x.concatenate(y), batches)
         
