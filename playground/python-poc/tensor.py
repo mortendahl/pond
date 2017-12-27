@@ -563,3 +563,102 @@ class PrivateEncodedTensor:
         shares0 = self.shares0.sum(axis=axis, keepdims=True) % Q
         shares1 = self.shares1.sum(axis=axis, keepdims=True) % Q
         return PrivateEncodedTensor.from_shares(shares0, shares1)
+
+
+ANALYTIC_STORE = []
+NEXT_ID = 0
+
+
+class AnalyticTensor:
+    
+    def __init__(self, values, shape=None, ident=None):
+        if not values is None:
+            if not isinstance(values, np.ndarray):
+                values = np.array([values])
+            shape = values.shape
+        if ident is None:
+            global NEXT_ID
+            ident = "tensor_%d" % NEXT_ID
+            NEXT_ID += 1
+        self.shape = shape
+        self.ident = ident
+    
+    def from_shape(shape, ident=None):
+        return AnalyticTensor(None, shape, ident)
+    
+    def __repr__(self):
+        return "AnalyticTensor(%s, %s)" % (self.shape, self.ident)
+    
+    def __getitem__(self, index):
+        start, stop, _ = index.indices(self.shape[0])
+        shape = list(self.shape)
+        shape[0] = stop - start
+        ident = "%s_%d,%d" % (self.ident, start, stop)
+        return AnalyticTensor.from_shape(tuple(shape), ident)
+    
+    def reset():
+        global ANALYTIC_STORE
+        ANALYTIC_STORE = []
+    
+    def store():
+        global ANALYTIC_STORE
+        return ANALYTIC_STORE
+    
+    @property
+    def size(self):
+        return np.prod(self.shape)
+    
+    def reveal(self):
+        return self
+    
+    def wrap_if_needed(y):
+        if isinstance(y, int) or isinstance(y, float): return AnalyticTensor.from_shape((1,))
+        if isinstance(y, np.ndarray): return AnalyticTensor.from_shape(y.shape)
+        return y
+    
+    def add(x, y):
+        y = AnalyticTensor.wrap_if_needed(y)
+        ANALYTIC_STORE.append(('add', x, y))
+        return AnalyticTensor.from_shape(x.shape)
+        
+    def __add__(x, y):
+        return x.add(y)
+    
+    def sub(x, y):
+        y = AnalyticTensor.wrap_if_needed(y)
+        ANALYTIC_STORE.append(('sub', x, y))
+        return AnalyticTensor.from_shape(x.shape)
+        
+    def __sub__(x, y):
+        return x.sub(y)
+    
+    def mul(x, y):
+        y = AnalyticTensor.wrap_if_needed(y)
+        ANALYTIC_STORE.append(('mul', x, y))
+        return AnalyticTensor.from_shape(x.shape)
+        
+    def __mul__(x, y):
+        return x.mul(y)
+    
+    def dot(x, y):
+        y = AnalyticTensor.wrap_if_needed(y)
+        ANALYTIC_STORE.append(('dot', x, y))
+        return AnalyticTensor.from_shape(x.shape)
+    
+    def div(x, y):
+        y = AnalyticTensor.wrap_if_needed(y)
+        ANALYTIC_STORE.append(('div', x, y))
+        return AnalyticTensor.from_shape(x.shape)
+    
+    def neg(self):
+        ANALYTIC_STORE.append(('neg', self))
+        return AnalyticTensor.from_shape(self.shape)
+        
+    def transpose(self):
+        ANALYTIC_STORE.append(('transpose', self))
+        return self
+    
+    def sum(self, axis):
+        ANALYTIC_STORE.append(('sum', self))
+        return AnalyticTensor.from_shape(self.shape)
+    

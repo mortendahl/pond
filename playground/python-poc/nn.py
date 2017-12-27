@@ -166,7 +166,20 @@ class CrossEntropy(Loss):
         
     def derive(self, y_pred, y_correct):
         return y_correct
+
+
+class DataLoader:
     
+    def __init__(self, data, wrapper=lambda x: x):
+        self.data = data
+        self.wrapper = wrapper
+        
+    def new_generator(self, batch_size=32):
+        return ( 
+            self.wrapper(self.data[i:i+batch_size]) 
+            for i in range(0, self.data.shape[0], batch_size) 
+        )
+
     
 class Model:
     pass
@@ -190,16 +203,19 @@ class Sequential(Model):
         for layer in reversed(self.layers):
             d_y = layer.backward(d_y, learning_rate)
             
-    def fit(self, x_train, y_train, loss, batch_size=32, epochs=1000, learning_rate=.01, verbose=False):
+    def fit(self, x_train, y_train, loss, batch_size=32, epochs=1000, learning_rate=.01, verbose=0):
+        if not isinstance(x_train, DataLoader): x_train = DataLoader(x_train)
+        if not isinstance(y_train, DataLoader): y_train = DataLoader(y_train)
         for epoch in range(epochs):
-            if verbose and epochs < 50: print(datetime.now(), "Epoch %s" % epoch) # TODO
-            x_chunks = ( x_train[i:i+batch_size] for i in range(0, x_train.shape[0], batch_size) )
-            y_chunks = ( y_train[i:i+batch_size] for i in range(0, y_train.shape[0], batch_size) )
+            if verbose >= 1: print(datetime.now(), "Epoch %s" % epoch)
+            x_chunks = x_train.new_generator()
+            y_chunks = y_train.new_generator()
             for batch_index, (x, y) in enumerate(zip(x_chunks, y_chunks)):
-                if verbose: print(datetime.now(), "Batch %s" % batch_index)
+                if verbose >= 2: print(datetime.now(), "Batch %s" % batch_index)
                 y_pred = self.forward(x)
                 d_y = loss.derive(y_pred, y)
                 self.backward(d_y, learning_rate)
             
     def predict(self, x):
-        return self.forward(x)
+        if not isinstance(x, DataLoader): x = DataLoader(x)
+        return np.stack( self.forward(batch) for batch in x.new_generator() )
