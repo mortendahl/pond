@@ -214,12 +214,25 @@ class PublicEncodedTensor:
         
     def mul(x, y):
         y = wrap_if_needed(y)
-        if isinstance(y, PublicEncodedTensor): return PublicEncodedTensor.from_elements((x.elements * y.elements) % Q).truncate()
         if isinstance(y, PublicFieldTensor): return PublicFieldTensor.from_elements((x.elements * y.elements) % Q)
+        if isinstance(y, PublicEncodedTensor): return PublicEncodedTensor.from_elements((x.elements * y.elements) % Q).truncate()
+        if isinstance(y, PrivateEncodedTensor):
+            shares0 = (x.elements * y.shares0) % Q
+            shares1 = (x.elements * y.shares1) % Q
+            return PrivateEncodedTensor.from_shares(shares0, shares1).truncate()
         raise TypeError("%s does not support %s" % (type(x), type(y)))
     
     def __mul__(x, y):
         return x.mul(y)
+    
+    def dot(x, y):
+        y = wrap_if_needed(y)
+        if isinstance(y, PublicEncodedTensor): return PublicEncodedTensor.from_elements(x.elements.dot(y.elements) % Q).truncate()
+        if isinstance(y, PrivateEncodedTensor):
+            shares0 = x.elements.dot(y.shares0) % Q
+            shares1 = x.elements.dot(y.shares1) % Q
+            return PrivateEncodedTensor.from_shares(shares0, shares1).truncate()
+        raise TypeError("%s does not support %s" % (type(x), type(y)))
     
     def div(x, y):
         y = wrap_if_needed(y)
@@ -229,11 +242,6 @@ class PublicEncodedTensor:
     
     def __div__(x, y):
         return x.div(y)
-    
-    def dot(x, y):
-        y = wrap_if_needed(y)
-        if isinstance(y, PublicEncodedTensor): return PublicEncodedTensor.from_elements(x.elements.dot(y.elements) % Q).truncate()
-        raise TypeError("%s does not support %s" % (type(x), type(y)))
         
     def transpose(x):
         return PublicEncodedTensor.from_elements(x.elements.T)
