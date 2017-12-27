@@ -220,7 +220,7 @@ class Sequential(Model):
     def predict(self, x, batch_size=32, verbose=0):
         if not isinstance(x, DataLoader): x = DataLoader(x)
         batches = []
-        for batch_index, x_batch in enumerate(x.batches(batch_size))
+        for batch_index, x_batch in enumerate(x.batches(batch_size)):
             if verbose >= 2: print(datetime.now(), "Batch %s" % batch_index)
             y_batch = self.forward(x_batch)
             batches.append(y_batch)
